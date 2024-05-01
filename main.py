@@ -22,7 +22,10 @@ Please see the README.md file for help in running this file.
 # TODO TypeString documentation on each variable important
 
 import json
+import glob
+import time
 from collections import Counter
+
 
 
 def main(messenger_chat):
@@ -31,14 +34,21 @@ def main(messenger_chat):
     try:
         print('\nPlease wait while the document loads.')
         # TODO setup to load either different file names or multiple files in different folders
-        with open('message_1.json') as chat:
-            file = json.load(chat)
+        messages = []
+        files = glob.glob('message*.json')
+        print(files)
+        for file in files:
+            with open(file) as chat:
+                messages.append(json.load(chat))
         print('File has finished loading. Parsing data.\n')
     except FileNotFoundError:
-        print('Error! File not found. You must give me a message_1.json file to '
+        print('Error! File not found. You must give me at least 1 message_xx.json file to '
               'work with in the same directory as this script!')
         return None
-
+    
+    file = messages[0]
+    for message in messages[1:]:
+        file["messages"].extend(message["messages"])
     # Get the current title
     messenger_chat['title'] = file['title']
 
@@ -146,6 +156,37 @@ def main(messenger_chat):
     print('Wrote Results to messenger_stats.txt. Please check that file for details!'
           '\n\nThanks for using my program :)!')
 
+def generate_call_log(message):
+    total_time_on_call = 0
+    total_number_of_calls = 0
+    with open("Call_Log.txt", "w+") as log:
+        log.write('Record of calls\n\n')
+    for call in message["messages"]:
+        if "call_duration" in call:
+            total_number_of_calls += 1
+            total_time_on_call += call["call_duration"]
+            date = time.asctime(time.gmtime(call["timestamp_ms"]/1000))
+            duration = convertseconds(call["call_duration"])
+            caller = call["sender_name"]
+            with open("Call_Log.txt", "a+") as log:
+                log.write('On ' + date + '\n' + caller + ' called\n' + 'Call Lasted for: ' + duration + '\n\n')
+    
+    total_time_on_call = convertseconds2(total_time_on_call)
+    with open("Call_Log.txt", "a+") as log:
+        log.write("You have called " + str(total_number_of_calls) + " times\nTotal time spend on call: " + total_time_on_call)
+
+def convertseconds(sec):
+    seconds=round((sec)%60)
+    minutes=round((sec/60)%60)
+    hours=round((sec/(60*60)))
+    return(str(hours) + ':' + str(minutes) + ':' + str(seconds))
+
+def convertseconds2(sec):
+    seconds=round((sec)%60)
+    minutes=round((sec/60)%60)
+    hours=round((sec/(60*60))%24)
+    days = round((sec/(60*60*24)))
+    return(str(days) + ' :: ' + str(hours) + ':' + str(minutes) + ':' + str(seconds))
 
 def remove_common(counter):
     """
